@@ -61,13 +61,16 @@ void display(const char* name)
         //printf("x");
         mode[8]='x';
 
-    printf("%s -  %s - %s:%s\n", name,mode, pw->pw_name, gr->gr_name);
+    struct tm *local = localtime(&st.st_mtime); 
+
+    printf("%s -  %s - %s:%s - %ld - %d%d%d @ %dh%d\n", name,mode, pw->pw_name, gr->gr_name, st.st_size, local->tm_mday, local->tm_mon + 1, local->tm_year + 1900, local->tm_hour, local->tm_min);
 } 
 int main(int argc, char** argv)
 {
     DIR *d;
     struct dirent *dir;
     d = opendir(getenv("PWD"));
+
     if (d) {
         while ((dir = readdir(d)) != NULL) {
             display(dir->d_name);
