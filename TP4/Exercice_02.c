@@ -10,17 +10,18 @@ pid_t pere_pid;
 pid_t fils_pid;
 
 void sig_handler(int sig) {
-    if (sig == SIGUSR1) {
+    if (getpid() == pere_pid) {
         printf("Père: Signal reçu\n");
         sleep(1); // Temporisation
         if (rand() % 2) {
             printf("Père: Renvoie la balle\n");
-            kill(fils_pid, SIGUSR2);
+            kill(fils_pid, SIGUSR1);
         } else {
             printf("Père: Manque la balle\n");
             points_fils++;
+            kill(fils_pid, SIGUSR1); // Renvoie la balle même si la balle est manquée
         }
-    } else if (sig == SIGUSR2) {
+    } else {
         printf("Fils: Signal reçu\n");
         sleep(1); // Temporisation
         if (rand() % 2) {
@@ -29,6 +30,7 @@ void sig_handler(int sig) {
         } else {
             printf("Fils: Manque la balle\n");
             points_pere++;
+            kill(pere_pid, SIGUSR1); // Renvoie la balle même si la balle est manquée
         }
     }
 
@@ -55,8 +57,7 @@ int main() {
 
     if (fils_pid == 0) {
         // Processus fils
-        fils_pid = getpid();
-        signal(SIGUSR2, sig_handler);
+        signal(SIGUSR1, sig_handler);
         while (1) {
             pause();
         }
@@ -65,7 +66,7 @@ int main() {
         signal(SIGUSR1, sig_handler);
         sleep(1);
         printf("Père: Envoie la balle\n");
-        kill(fils_pid, SIGUSR2);
+        kill(fils_pid, SIGUSR1);
 
         while (1) {
             pause();
