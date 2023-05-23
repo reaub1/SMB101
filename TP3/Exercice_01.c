@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <limits.h>
+#include <errno.h> // Ajout pour gérer les erreurs ERRNO
 
 #define SIZE (int)1e8
 #define NUM_THREADS 4
@@ -17,25 +18,35 @@ typedef struct {
     int end;
 } ThreadRange;
 
+// Cette fonction trouve le min et max dans un sous-ensemble de 'tab'
 void *find_min_max(void *arg) {
     ThreadRange *range = (ThreadRange *)arg;
     int local_min = INT_MAX;
     int local_max = INT_MIN;
 
+    // Trouver le min et max locaux
     for (int i = range->start; i < range->end; i++) {
         if (tab[i] < local_min) local_min = tab[i];
         if (tab[i] > local_max) local_max = tab[i];
     }
 
-    pthread_mutex_lock(&mutex);
+    // Protéger l'accès aux variables globales
+    if(pthread_mutex_lock(&mutex) != 0) {
+        perror("pthread_mutex_lock"); // Afficher l'erreur
+        return NULL;
+    }
     if (local_min < global_min) global_min = local_min;
     if (local_max > global_max) global_max = local_max;
-    pthread_mutex_unlock(&mutex);
+    if(pthread_mutex_unlock(&mutex) != 0) {
+        perror("pthread_mutex_unlock"); // Afficher l'erreur
+        return NULL;
+    }
 
     return NULL;
 }
 
 int main() {
+    // Initialisation de 'tab' avec des nombres aléatoires
     srand(time(NULL));
     for (int i = 0; i < SIZE; i++) {
         tab[i] = rand();
@@ -47,14 +58,22 @@ int main() {
     pthread_t threads[NUM_THREADS];
     ThreadRange ranges[NUM_THREADS];
 
+    // Créer les threads et assigner leurs sous-ensembles respectifs de 'tab'
     for (int i = 0; i < NUM_THREADS; i++) {
         ranges[i].start = i * (SIZE / NUM_THREADS);
         ranges[i].end = (i + 1) * (SIZE / NUM_THREADS);
-        pthread_create(&threads[i], NULL, find_min_max, &ranges[i]);
+        if(pthread_create(&threads[i], NULL, find_min_max, &ranges[i]) != 0) {
+            perror("pthread_create"); // Afficher l'erreur
+            return EXIT_FAILURE;
+        }
     }
 
+    // Attendre que tous les threads aient terminé
     for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
+        if(pthread_join(threads[i], NULL) != 0) {
+            perror("pthread_join"); // Afficher l'erreur
+            return EXIT_FAILURE;
+        }
     }
 
     gettimeofday(&end, NULL);

@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdlib.h>
+#include <errno.h>
 
 int main() {
     // Création du processus fils avec la primitive système fork
